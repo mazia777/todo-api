@@ -7,6 +7,7 @@ use App\Http\Requests\Todo\StoreTodoRequest;
 use App\Http\Requests\Todo\UpdateTodoRequest;
 use App\Models\Todo;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Response;
 use Illuminate\Http\Request;
 
 class TodoController extends Controller
@@ -56,7 +57,7 @@ class TodoController extends Controller
         ]);
     }
 
-    public function destroy(Todo $todo): JsonResponse
+    public function destroy(Todo $todo): Response
     {
         $this->authorize('delete', $todo);
 

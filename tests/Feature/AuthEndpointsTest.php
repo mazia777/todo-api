@@ -27,9 +27,25 @@ class AuthEndpointsTest extends TestCase
                 'data' => ['token', 'token_type', 'user'],
             ]);
 
+        $response->assertJsonPath('data.token_type', 'Bearer');
+
         $this->assertDatabaseHas('users', [
             'email' => 'jane@example.com',
         ]);
+    }
+
+    public function test_register_validation_fails(): void
+    {
+        $response = $this->postJson('/api/auth/register', [
+            'name' => 'Jane Doe',
+            'email' => 'not-an-email',
+            'password' => 'password123',
+            'password_confirmation' => 'different',
+        ]);
+
+        $response
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['email', 'password']);
     }
 
     public function test_login_returns_token(): void
@@ -51,10 +67,26 @@ class AuthEndpointsTest extends TestCase
             ]);
     }
 
-    public function test_logout_requires_auth_and_revokes_token(): void
+    public function test_login_invalid_returns_unauthorized(): void
+    {
+        $user = User::factory()->create([
+            'email' => 'john@example.com',
+            'password' => 'password123',
+        ]);
+
+        $this->postJson('/api/auth/login', [
+            'email' => $user->email,
+            'password' => 'wrong-password',
+        ])->assertUnauthorized();
+    }
+
+    public function test_logout_requires_auth(): void
     {
         $this->postJson('/api/auth/logout')->assertUnauthorized();
+    }
 
+    public function test_logout_revokes_token(): void
+    {
         $user = User::factory()->create();
         $token = $user->createToken('auth_token');
 
@@ -62,6 +94,6 @@ class AuthEndpointsTest extends TestCase
             ->postJson('/api/auth/logout')
             ->assertNoContent();
 
-        $this->assertSame(0, $user->tokens()->count());
+        $this->assertDatabaseCount('personal_access_tokens', 0);
     }
 }
